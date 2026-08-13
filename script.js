@@ -229,7 +229,7 @@ function updateRates() {
 // Update rates every second
 setInterval(
     updateRates,
-    10
+    1
 );
 
 
