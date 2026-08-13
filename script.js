@@ -1,28 +1,31 @@
 // ==========================================
-// PRESTON CLICKER - GLOBAL COUNTER
+// PRESTON CLICKER - GLOBAL VERSION
 // ==========================================
 
-// Supabase connection
 const SUPABASE_URL = "https://xngccbpchzyhebnirhfm.supabase.co";
 
-// Your PUBLIC/PUBLISHABLE key
-const SUPABASE_KEY = "your-publishable-key";
+const SUPABASE_KEY =
+    "sb_publishable_N9J4vcxM4SPUl2eHZJAvNg_QitFdwDs";
 
-const db = supabase.createClient(
+const db = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
 
 
 // ==========================================
-// PAGE ELEMENTS
+// ELEMENTS
 // ==========================================
 
 const counter = document.getElementById("counter");
+const clickButton = document.getElementById("clickButton");
+
+const perMinute = document.getElementById("perMinute");
+const perHour = document.getElementById("perHour");
+
 const goalText = document.getElementById("goal");
 const remainingText = document.getElementById("remaining");
 const progress = document.getElementById("progress");
-const clickButton = document.getElementById("clickButton");
 
 
 // ==========================================
@@ -59,7 +62,7 @@ for (let i = 2000000; i <= 100000000; i += 1000000) {
 
 
 // ==========================================
-// FORMAT NUMBERS
+// NUMBER FORMAT
 // ==========================================
 
 function formatNumber(number) {
@@ -82,12 +85,12 @@ function formatNumber(number) {
             .replace(".0", "") + "K";
     }
 
-    return number.toLocaleString();
+    return Number(number).toLocaleString();
 }
 
 
 // ==========================================
-// GOAL SYSTEM
+// UPDATE GOAL
 // ==========================================
 
 function updateGoal(count) {
@@ -97,19 +100,16 @@ function updateGoal(count) {
     if (!nextGoal) {
 
         goalText.textContent = "100M+";
-
-        remainingText.textContent =
-            "Milestones complete!";
-
+        remainingText.textContent = "Milestones complete!";
         progress.style.width = "100%";
 
         return;
     }
 
-    const goalIndex = goals.indexOf(nextGoal);
+    const index = goals.indexOf(nextGoal);
 
     const previousGoal =
-        goals[goalIndex - 1] || 0;
+        index > 0 ? goals[index - 1] : 0;
 
     const remaining =
         nextGoal - count;
@@ -125,27 +125,20 @@ function updateGoal(count) {
         (nextGoal - previousGoal)) * 100;
 
     progress.style.width =
-        Math.max(
-            0,
-            Math.min(100, percentage)
-        ) + "%";
+        Math.max(0, Math.min(100, percentage)) + "%";
 }
 
 
 // ==========================================
-// UPDATE COUNTER
+// UPDATE MAIN COUNTER
 // ==========================================
-
-let currentCount = 190000;
 
 function updateCounter(count) {
 
-    currentCount = count;
-
     counter.textContent =
-        count.toLocaleString();
+        Number(count).toLocaleString();
 
-    updateGoal(count);
+    updateGoal(Number(count));
 }
 
 
@@ -157,31 +150,34 @@ clickButton.addEventListener("click", async () => {
 
     clickButton.disabled = true;
 
-    const { data, error } =
-        await db.rpc("increment_global_clicks");
+    try {
 
-    if (error) {
+        const { data, error } =
+            await db.rpc("increment_global_clicks");
 
-        console.error(
-            "Global click error:",
-            error
-        );
+        if (error) {
+            console.error("CLICK ERROR:", error);
+            return;
+        }
+
+        if (data !== null) {
+            updateCounter(Number(data));
+        }
+
+    } catch (error) {
+
+        console.error("GLOBAL CLICK ERROR:", error);
+
+    } finally {
 
         clickButton.disabled = false;
 
-        return;
     }
-
-    if (data !== null) {
-        updateCounter(Number(data));
-    }
-
-    clickButton.disabled = false;
 });
 
 
 // ==========================================
-// GET CURRENT GLOBAL COUNT
+// LOAD GLOBAL COUNTER
 // ==========================================
 
 async function loadCounter() {
@@ -195,25 +191,21 @@ async function loadCounter() {
 
     if (error) {
 
-        console.error(
-            "Counter loading error:",
-            error
-        );
+        console.error("LOAD ERROR:", error);
 
         return;
     }
 
-    updateCounter(
-        Number(data.clicks)
-    );
+    updateCounter(Number(data.clicks));
 }
 
 
 // ==========================================
-// REALTIME GLOBAL UPDATES
+// GLOBAL REALTIME UPDATES
 // ==========================================
 
-db.channel("global-counter")
+db.channel("preston-global-counter")
+
     .on(
         "postgres_changes",
         {
@@ -221,84 +213,88 @@ db.channel("global-counter")
             schema: "public",
             table: "global_counter"
         },
-        payload => {
+
+        (payload) => {
 
             const newCount =
                 Number(payload.new.clicks);
 
             updateCounter(newCount);
 
-            recordGlobalClick();
+            recordClick();
         }
     )
-    .subscribe();
+
+    .subscribe((status) => {
+
+        console.log(
+            "Realtime status:",
+            status
+        );
+
+    });
 
 
 // ==========================================
-// CLICKS / MINUTE + HOUR
+// CLICKS PER MINUTE / HOUR
 // ==========================================
 
-let recentGlobalClicks = [];
+let clickHistory = [];
 
-function recordGlobalClick() {
+function recordClick() {
 
-    const now = Date.now();
+    clickHistory.push(Date.now());
 
-    recentGlobalClicks.push(now);
+    cleanHistory();
 
-    cleanClickHistory();
-
-    updateRateDisplay();
+    updateRates();
 }
 
-function cleanClickHistory() {
+
+function cleanHistory() {
 
     const now = Date.now();
 
-    recentGlobalClicks =
-        recentGlobalClicks.filter(
-            timestamp =>
-                now - timestamp <= 3600000
+    clickHistory =
+        clickHistory.filter(
+            time =>
+                now - time <= 3600000
         );
 }
 
-function updateRateDisplay() {
 
-    cleanClickHistory();
+function updateRates() {
+
+    cleanHistory();
 
     const now = Date.now();
 
-    const oneMinuteAgo =
+    const minuteAgo =
         now - 60000;
 
-    const oneHourAgo =
+    const hourAgo =
         now - 3600000;
 
-    const minuteClicks =
-        recentGlobalClicks.filter(
-            timestamp =>
-                timestamp >= oneMinuteAgo
+    const minuteCount =
+        clickHistory.filter(
+            time => time >= minuteAgo
         ).length;
 
-    const hourClicks =
-        recentGlobalClicks.filter(
-            timestamp =>
-                timestamp >= oneHourAgo
+    const hourCount =
+        clickHistory.filter(
+            time => time >= hourAgo
         ).length;
 
-    document.getElementById(
-        "perMinute"
-    ).textContent =
-        minuteClicks.toLocaleString();
+    perMinute.textContent =
+        minuteCount.toLocaleString();
 
-    document.getElementById(
-        "perHour"
-    ).textContent =
-        hourClicks.toLocaleString();
+    perHour.textContent =
+        hourCount.toLocaleString();
 }
 
+
 setInterval(
-    updateRateDisplay,
+    updateRates,
     1000
 );
 
@@ -308,4 +304,8 @@ setInterval(
 // ==========================================
 
 loadCounter();
-updateRateDisplay();
+
+updateRates();
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
