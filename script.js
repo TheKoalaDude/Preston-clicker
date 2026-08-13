@@ -1,184 +1,90 @@
-// ==========================================
-// PRESTON CLICKER - GLOBAL VERSION
-// ==========================================
-
 const SUPABASE_URL = "https://xngccbpchzyhebnirhfm.supabase.co";
 
-const SUPABASE_KEY =
-    "sb_publishable_N9J4vcxM4SPUl2eHZJAvNg_QitFdwDs";
+const SUPABASE_KEY = "sb_publishable_N9J4vcxM4SPUl2eHZJAvNg_QitFdwDs";
 
 const db = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
 
-
-// ==========================================
-// ELEMENTS
-// ==========================================
-
 const counter = document.getElementById("counter");
 const clickButton = document.getElementById("clickButton");
-
 const perMinute = document.getElementById("perMinute");
 const perHour = document.getElementById("perHour");
-
 const goalText = document.getElementById("goal");
 const remainingText = document.getElementById("remaining");
 const progress = document.getElementById("progress");
 
-
-// ==========================================
-// GOALS
-// ==========================================
-
 const goals = [
-    100,
-    1000,
-    10000,
-    20000,
-    30000,
-    40000,
-    50000,
-    60000,
-    70000,
-    80000,
-    90000,
-    100000,
-    200000,
-    300000,
-    400000,
-    500000,
-    600000,
-    700000,
-    800000,
-    900000,
-    1000000
+    100, 1000, 10000,
+    20000, 30000, 40000, 50000,
+    60000, 70000, 80000, 90000,
+    100000, 200000, 300000, 400000,
+    500000, 600000, 700000, 800000,
+    900000, 1000000
 ];
 
-for (let i = 2000000; i <= 100000000; i += 1000000) {
-    goals.push(i);
+for (let n = 2000000; n <= 100000000; n += 1000000) {
+    goals.push(n);
 }
 
+function formatNumber(n) {
+    if (n >= 1000000)
+        return (n / 1000000).toFixed(1).replace(".0", "") + "M";
 
-// ==========================================
-// NUMBER FORMAT
-// ==========================================
+    if (n >= 1000)
+        return (n / 1000).toFixed(1).replace(".0", "") + "K";
 
-function formatNumber(number) {
-
-    if (number >= 1000000000) {
-        return (number / 1000000000)
-            .toFixed(1)
-            .replace(".0", "") + "B";
-    }
-
-    if (number >= 1000000) {
-        return (number / 1000000)
-            .toFixed(1)
-            .replace(".0", "") + "M";
-    }
-
-    if (number >= 1000) {
-        return (number / 1000)
-            .toFixed(1)
-            .replace(".0", "") + "K";
-    }
-
-    return Number(number).toLocaleString();
+    return n.toLocaleString();
 }
-
-
-// ==========================================
-// UPDATE GOAL
-// ==========================================
 
 function updateGoal(count) {
 
-    const nextGoal = goals.find(goal => goal > count);
+    const next = goals.find(g => g > count);
 
-    if (!nextGoal) {
-
+    if (!next) {
         goalText.textContent = "100M+";
         remainingText.textContent = "Milestones complete!";
         progress.style.width = "100%";
-
         return;
     }
 
-    const index = goals.indexOf(nextGoal);
+    const index = goals.indexOf(next);
+    const previous = index > 0 ? goals[index - 1] : 0;
 
-    const previousGoal =
-        index > 0 ? goals[index - 1] : 0;
-
-    const remaining =
-        nextGoal - count;
-
-    goalText.textContent =
-        formatNumber(nextGoal);
-
+    goalText.textContent = formatNumber(next);
     remainingText.textContent =
-        `${formatNumber(remaining)} remaining`;
+        formatNumber(next - count) + " remaining";
 
-    const percentage =
-        ((count - previousGoal) /
-        (nextGoal - previousGoal)) * 100;
+    const percent =
+        ((count - previous) / (next - previous)) * 100;
 
     progress.style.width =
-        Math.max(0, Math.min(100, percentage)) + "%";
+        Math.max(0, Math.min(100, percent)) + "%";
 }
-
-
-// ==========================================
-// UPDATE MAIN COUNTER
-// ==========================================
 
 function updateCounter(count) {
-
-    counter.textContent =
-        Number(count).toLocaleString();
-
+    counter.textContent = Number(count).toLocaleString();
     updateGoal(Number(count));
 }
-
-
-// ==========================================
-// GLOBAL CLICK
-// ==========================================
 
 clickButton.addEventListener("click", async () => {
 
     clickButton.disabled = true;
 
-    try {
+    const { data, error } =
+        await db.rpc("increment_global_clicks");
 
-        const { data, error } =
-            await db.rpc("increment_global_clicks");
-
-        if (error) {
-            console.error("CLICK ERROR:", error);
-            return;
-        }
-
-        if (data !== null) {
-            updateCounter(Number(data));
-        }
-
-    } catch (error) {
-
-        console.error("GLOBAL CLICK ERROR:", error);
-
-    } finally {
-
+    if (error) {
+        console.error("CLICK ERROR:", error);
         clickButton.disabled = false;
-
+        return;
     }
+
+    updateCounter(Number(data));
+
+    clickButton.disabled = false;
 });
-
-
-// ==========================================
-// LOAD GLOBAL COUNTER
-// ==========================================
 
 async function loadCounter() {
 
@@ -190,22 +96,39 @@ async function loadCounter() {
             .single();
 
     if (error) {
-
         console.error("LOAD ERROR:", error);
-
         return;
     }
 
     updateCounter(Number(data.clicks));
 }
 
+let clickTimes = [];
 
-// ==========================================
-// GLOBAL REALTIME UPDATES
-// ==========================================
+function recordClick() {
+    clickTimes.push(Date.now());
+    updateRates();
+}
 
-db.channel("preston-global-counter")
+function updateRates() {
 
+    const now = Date.now();
+
+    clickTimes = clickTimes.filter(
+        t => now - t <= 3600000
+    );
+
+    const minute = clickTimes.filter(
+        t => now - t <= 60000
+    ).length;
+
+    const hour = clickTimes.length;
+
+    perMinute.textContent = minute.toLocaleString();
+    perHour.textContent = hour.toLocaleString();
+}
+
+db.channel("preston-global")
     .on(
         "postgres_changes",
         {
@@ -213,99 +136,14 @@ db.channel("preston-global-counter")
             schema: "public",
             table: "global_counter"
         },
-
-        (payload) => {
-
-            const newCount =
-                Number(payload.new.clicks);
-
-            updateCounter(newCount);
-
+        payload => {
+            updateCounter(Number(payload.new.clicks));
             recordClick();
         }
     )
-
-    .subscribe((status) => {
-
-        console.log(
-            "Realtime status:",
-            status
-        );
-
-    });
-
-
-// ==========================================
-// CLICKS PER MINUTE / HOUR
-// ==========================================
-
-let clickHistory = [];
-
-function recordClick() {
-
-    clickHistory.push(Date.now());
-
-    cleanHistory();
-
-    updateRates();
-}
-
-
-function cleanHistory() {
-
-    const now = Date.now();
-
-    clickHistory =
-        clickHistory.filter(
-            time =>
-                now - time <= 3600000
-        );
-}
-
-
-function updateRates() {
-
-    cleanHistory();
-
-    const now = Date.now();
-
-    const minuteAgo =
-        now - 60000;
-
-    const hourAgo =
-        now - 3600000;
-
-    const minuteCount =
-        clickHistory.filter(
-            time => time >= minuteAgo
-        ).length;
-
-    const hourCount =
-        clickHistory.filter(
-            time => time >= hourAgo
-        ).length;
-
-    perMinute.textContent =
-        minuteCount.toLocaleString();
-
-    perHour.textContent =
-        hourCount.toLocaleString();
-}
-
-
-setInterval(
-    updateRates,
-    1000
-);
-
-
-// ==========================================
-// START
-// ==========================================
+    .subscribe();
 
 loadCounter();
-
 updateRates();
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="script.js"></script>
+setInterval(updateRates, 1000);
