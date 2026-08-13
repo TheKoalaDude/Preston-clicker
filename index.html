@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Preston Clicker</title>
+
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -11,29 +13,50 @@
 
     <div class="background"></div>
 
+    <!-- Preston profile -->
     <div class="profile">
         <div class="profile-circle">
-            <img src="https://static.wikia.nocookie.net/youtube/images/f/f5/Preston.png/revision/latest?cb=20240803203436" alt="Preston">
+            <img
+                src="https://static.wikia.nocookie.net/youtube/images/f/f5/Preston.png/revision/latest?cb=20240803203436"
+                alt="Preston"
+            >
         </div>
+
         <span>Preston</span>
     </div>
 
+
+    <!-- Global indicator -->
     <div class="global">
         <div class="global-circle"></div>
         <span>Global</span>
     </div>
 
+
+    <!-- Title -->
     <h1>Preston's Live Clicker Count</h1>
 
+
+    <!-- Main clicker -->
     <main class="panel">
 
         <div id="counter">190,000</div>
 
-        <button id="clickButton">
-            <img src="https://static.wikia.nocookie.net/youtube/images/f/f5/Preston.png/revision/latest?cb=20240803203436" alt="Preston">
+
+        <!-- Click button -->
+        <button id="clickButton" type="button">
+
+            <img
+                src="https://static.wikia.nocookie.net/youtube/images/f/f5/Preston.png/revision/latest?cb=20240803203436"
+                alt="Preston"
+            >
+
         </button>
 
+
+        <!-- Click statistics -->
         <div class="stats">
+
             <div>
                 <span id="perMinute">0</span>
                 <small>/ minute</small>
@@ -43,27 +66,49 @@
                 <span id="perHour">0</span>
                 <small>/ hour</small>
             </div>
+
         </div>
 
+
+        <!-- Goal -->
         <section class="goal">
+
             <div class="goal-title">
+
                 <span>Goal:</span>
+
                 <strong id="goal">200K</strong>
+
             </div>
 
-            <div class="remaining" id="remaining">
+
+            <div
+                class="remaining"
+                id="remaining"
+            >
                 10K remaining
             </div>
 
+
             <div class="progress-container">
-                <div class="progress" id="progress"></div>
+
+                <div
+                    class="progress"
+                    id="progress"
+                ></div>
+
             </div>
+
         </section>
 
     </main>
 
+
+    <!-- SUPABASE MUST LOAD FIRST -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="script.js"></script>
-    
+
+    <!-- YOUR GLOBAL CLICKER CODE -->
+    <script src="script.js"></script>
+
 </body>
 </html>
